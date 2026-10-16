@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>EEG Data Mining</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-in">
+    <a class="brand" href="#accueil" aria-label="EEG Data Mining, accueil">
+      <svg class="brand-logo" viewBox="0 0 56 48" aria-hidden="true">
+        <path d="M27 5C20 1 11 4 9 12 3 13 1 21 5 26 3 33 9 40 16 39 19 45 27 45 29 40 L29 8Z" fill="#0c8264"/>
+        <path d="M29 8C31 2 41 1 46 6 52 8 54 16 50 21 54 28 49 36 42 36 39 43 31 44 29 40Z" fill="#2eae8a"/>
+        <path d="M2 25H14L18 14L24 36L29 20L33 30L36 25H54" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand-name">EEG Data Mining</span>
+    </a>
+    <nav class="nav" aria-label="Navigation principale">
+      <a class="nav-link is-active" href="#accueil" aria-current="true">Accueil</a>
+      <a class="nav-link" href="#donnees">Données</a>
+      <a class="nav-link" href="#exploration">Exploration</a>
+      <a class="nav-link" href="#annotations">Annotations</a>
+      <a class="nav-link" href="#analyse">Analyse</a>
+      <a class="nav-link" href="#resultats">Résultats</a>
+      <a class="nav-link" href="#apropos">À propos</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ===================== ACCUEIL ===================== -->
+<section id="accueil" class="section-anchor">
+  <div class="hero">
+    <div class="wrap hero-in">
+      <div class="hero-text">
+        <h1>Détection des Crises Épileptiques</h1>
+        <p>Exploration, annotation, segmentation et extraction de caractéristiques temporelles pour l'analyse des crises épileptiques.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#analyse">
+            <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff"/><path d="M13 10.5L22 16L13 21.5Z" fill="#0c8264"/></svg>
+            Commencer l'analyse
+          </a>
+          <a class="btn btn-outline" href="#donnees">
+            <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true"><path d="M2.5 5.5a2 2 0 0 1 2-2h6l3 3h10a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-19a2 2 0 0 1-2-2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            Explorer les données
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-brain" aria-hidden="true">
+        <img src="brain.jpg" alt="" width="716" height="740">
+      </div>
+
+      <div class="hero-eeg">
+        <canvas id="heroCanvas" role="img" aria-label="Huit canaux EEG avec une période de crise surlignée en rouge"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+
+    <div class="panels">
+      <article class="panel" id="apercu">
+        <h2 class="panel-title">
+          <svg viewBox="0 0 28 24" width="26" height="22" aria-hidden="true"><path d="M2 12h6l3-8 5 16 3-8h7" fill="none" stroke="#0c8264" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v-2M3 22v-2M25 4v-2" stroke="#0c8264" stroke-width="2" stroke-linecap="round"/></svg>
+          Aperçu d'un signal EEG
+        </h2>
+        <label class="visually-hidden" for="patientSelect">Enregistrement à afficher</label>
+        <div class="select-wrap">
+          <select id="patientSelect" class="select"></select>
+        </div>
+        <div class="signal-tools">
+          <label class="file-btn">
+            <input type="file" id="csvInput" accept=".csv,text/csv" multiple>
+            <span>Charger les CSV des patients</span>
+          </label>
+          <span class="csv-status" id="csvStatus" role="status" aria-live="polite"></span>
+        </div>
+        <div class="view-tools">
+          <div class="seg" id="segCh" role="group" aria-label="Canaux affichés">
+            <button type="button" class="seg-btn is-on" data-ch="all" aria-pressed="true">Tous les canaux</button>
+            <button type="button" class="seg-btn" data-ch="top" aria-pressed="false">8 plus actifs</button>
+          </div>
+          <div class="seg" role="group" aria-label="Étendue du tracé">
+            <button type="button" class="seg-btn is-on" data-view="window" aria-pressed="true">Fenêtre de 60 s</button>
+            <button type="button" class="seg-btn" data-view="global" aria-pressed="false">Trace global</button>
+          </div>
+          <label class="gsel" id="globalSelWrap" hidden>
+            <span class="visually-hidden">Signal du trace global</span>
+            <select id="globalSel" class="select select-sm"></select>
+          </label>
+        </div>
+        <div class="crise-tools" id="criseTools">
+          <button type="button" class="win-btn" id="criPrev" aria-label="Crise précédente">‹</button>
+          <button type="button" class="btn-crise" id="criGo">Voir crise</button>
+          <button type="button" class="win-btn" id="criNext" aria-label="Crise suivante">›</button>
+          <span class="crise-label" id="criLabel" role="status"></span>
+        </div>
+        <canvas id="previewCanvas" class="preview-canvas" role="img" aria-label="Signal EEG de l'enregistrement sélectionné"></canvas>
+        <div class="win-nav" id="winNav">
+          <button type="button" class="win-btn" id="winPrev" aria-label="Reculer de 30 secondes">‹</button>
+          <input type="range" id="winRange" min="0" max="0" value="0" step="1" aria-label="Position de la fenêtre de 60 secondes">
+          <button type="button" class="win-btn" id="winNext" aria-label="Avancer de 30 secondes">›</button>
+        </div>
+        <div class="legend-inline">
+          <span class="legend-item"><span class="legend-line"></span>Signal EEG</span>
+          <span class="legend-item"><span class="legend-box"></span>Période de crise</span>
+        </div>
+        <p class="note" id="previewNote"></p>
+      </article>
+
+      <article class="panel">
+        <h2 class="panel-title">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2" fill="none" stroke="#0c8264" stroke-width="3" stroke-linecap="round"/></svg>
+          Résumé du dataset
+        </h2>
+        <dl class="summary" id="summary"></dl>
+      </article>
+
+      <article class="panel">
+        <h2 class="panel-title">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 12V2a10 10 0 1 1-8.5 15.2Z" fill="#0c8264"/><path d="M10.5 11.5L3.5 17A10 10 0 0 1 10.5 2Z" fill="#8fd9c0"/></svg>
+          Répartition des enregistrements
+        </h2>
+        <div class="pie-wrap">
+          <svg id="pie" viewBox="0 0 240 240" role="img" aria-label="Part des enregistrements avec et sans crises"></svg>
+          <ul class="pie-legend" id="pieLegend"></ul>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== DONNÉES : PARTIE I ===================== -->
+<section id="donnees" class="section section-anchor">
+  <div class="wrap">
+    <header class="section-head">
+      <span class="part-tag">Partie I</span>
+      <h2>Données</h2>
+      <p>Compréhension et exploration des données (questions 1 et 2). Les valeurs viennent des sorties du notebook.</p>
+    </header>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 1</span><h3>Charger et décrire les fichiers EEG</h3></div>
+      <p class="q-ask">Pour chaque fichier : nombre de lignes, nombre de variables, fréquence d'échantillonnage, durée totale, nombre de valeurs manquantes. Afficher les premières lignes.</p>
+      <div class="table-scroll"><table class="table" id="recTable"><thead></thead><tbody></tbody></table></div>
+      <p class="note">Cliquez sur une ligne pour afficher ce patient dans l'aperçu du signal.</p>
+      <h4 class="q-sub">Premières lignes de 190304A_E_0000d.csv</h4>
+      <div class="table-scroll"><table class="table table-compact" id="headTable"><thead></thead><tbody></tbody></table></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>22 enregistrements explorés. Tous sont échantillonnés à 256 Hz, valeur recoupée avec le pas de la colonne <code>time</code> (1/256 s), et aucun ne contient de valeur manquante. Le nombre de variables est le nombre de canaux plus la colonne <code>time</code> : 24 pour 6 enregistrements (23 canaux), 22 pour 15 enregistrements (21 canaux) et 13 pour 200625A-F (12 canaux). Les durées vont de 1 173 s à 3 600 s.</p>
+        <p>Dans les 5 premières lignes de 190304A-E, les canaux 1 à 21 valent tous 0,038499 et les canaux 22 et 23 gardent chacun une valeur fixe.</p>
+      </div>
+    </article>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 2</span><h3>Représenter le signal EEG en fonction du temps</h3></div>
+      <p class="q-ask">Axe horizontal : temps en secondes. Axe vertical : amplitude EEG. Un titre. Les unités si elles sont disponibles. Que remarque-t-on visuellement pendant les crises ?</p>
+      <p>Le graphique est dans l'aperçu du signal de l'accueil : temps en secondes en abscisse, amplitude EEG en ordonnée, un canal par ligne, avec les crises surlignées. Le sujet ne précise pas l'unité de l'amplitude : elle reste « amplitude EEG ».</p>
+      <p><a class="btn-link" href="#apercu" data-go-viewer>Ouvrir l'aperçu du signal</a></p>
+      <h4 class="q-sub">Amplitude RMS : crise et hors crise, par patient</h4>
+      <div class="chart-legend" id="rmsLegend"></div>
+      <div class="chart-scroll" id="rmsChart"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Visuellement, les crises se traduisent par une augmentation nette de l'amplitude du signal : des décharges plus amples. Le rapport médian amplitude(crise) / amplitude(hors crise) vaut 1,35, et l'amplitude est plus forte pendant la crise chez 15 patients sur 19. Elle ne l'est pas pour 210406A-F, 210427B-C, 230210B-D et 230224B-B (rapport inférieur à 1).</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== ANNOTATIONS : PARTIES II ET III ===================== -->
+<section id="annotations" class="section section-anchor">
+  <div class="wrap">
+    <header class="section-head">
+      <span class="part-tag">Parties II et III</span>
+      <h2>Annotations</h2>
+      <p>Exploitation des annotations (questions 3 et 4) et construction de la variable cible (questions 5 et 6).</p>
+    </header>
+
+    <h3 class="part-head">Partie II · Exploitation des annotations</h3>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 3</span><h3>Début, fin et nombre total de crises</h3></div>
+      <p class="q-ask">Identifier automatiquement le début de chaque crise, la fin de chaque crise et le nombre total de crises, sous la forme Crise / Début (s) / Fin (s) / Durée (s).</p>
+      <div class="grid-2 grid-tight">
+        <div>
+          <h4 class="q-sub">Convention de temps (exemple : 190304A-E)</h4>
+          <ul class="calc">
+            <li><span>Début du trace</span><b>10:13:35</b></li>
+            <li><span>Début de la crise 1</span><b>10:35:06</b></li>
+            <li><span>Fin de la crise 1</span><b>10:35:13</b></li>
+            <li><span>Dans le signal</span><b>1 291 s → 1 298 s</b></li>
+            <li><span>Durée</span><b>7 s</b></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="q-sub">Contrôles de cohérence</h4>
+          <ul class="checks" id="checks"></ul>
+        </div>
+      </div>
+      <h4 class="q-sub">Tableau des crises valides <span class="q-count" id="q3Count"></span></h4>
+      <div class="table-scroll table-tall"><table class="table table-compact" id="q3Table"><thead></thead><tbody></tbody></table></div>
+      <p class="note" id="q3Note"></p>
+      <h4 class="q-sub">Nombre de crises par patient : Excel et annotations valides</h4>
+      <div class="chart-legend" id="crisesLegend"></div>
+      <div class="chart-scroll" id="crisesChart"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>82 crises valides sur 83 annotations lues. Le temps de crise dans le signal est l'heure de la crise moins l'heure de début du trace, car l'Excel contient des heures d'horloge. Une annotation est exclue (210504B-C, crise 1, durée aberrante de 21 608 s) et une ligne est conservée par patient pour 230406B-A et 230515B-G, présents deux fois dans le classeur.</p>
+      </div>
+    </article>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 4</span><h3>Durées des crises et intervalle entre crises</h3></div>
+      <p class="q-ask">Calculer la durée moyenne, minimale et maximale des crises, ainsi que l'intervalle moyen entre deux crises. Les crises ont-elles toutes une durée similaire ?</p>
+      <div class="kpis" id="durKpis"></div>
+      <div class="chart-scroll" id="durHist"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Non. Les durées sont très dispersées, de 2 s à 60 s, avec un écart-type de 10,3 s et un coefficient de variation de 0,78. Beaucoup de crises sont courtes et quelques-unes sont beaucoup plus longues : la moyenne (13,2 s) est tirée vers le haut par les crises longues, la médiane est de 11 s. L'intervalle moyen de 184,6 s est calculé sur 63 intervalles, entre la fin d'une crise et le début de la suivante chez le même patient.</p>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie III · Construction de la variable cible</h3>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 5</span><h3>Colonne Class</h3></div>
+      <p class="q-ask">Créer une colonne Class : 0 pour l'absence de crise, 1 pour une crise. Pour chaque échantillon, déterminer sa classe à partir des intervalles [début crise, fin crise].</p>
+      <div class="table-scroll table-tall"><table class="table table-compact" id="classTable"><thead></thead><tbody></tbody></table></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Chaque échantillon reçoit la classe 1 si son temps est dans un intervalle [début, fin] d'une crise valide du même patient, bornes incluses, sinon 0. Le résultat est exporté dans <code>partie_III_classes.csv</code> : une ligne par échantillon (patient, temps, classe). Sur 8 506 368 échantillons, 8 228 270 sont de classe 0 et 278 098 de classe 1.</p>
+      </div>
+    </article>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 6</span><h3>Signal avec crises distinguées, et déséquilibre des classes</h3></div>
+      <p class="q-ask">Afficher le signal EEG en distinguant les périodes hors crise et pendant crise. Le déséquilibre entre les deux classes est-il important ? Calculer le pourcentage d'échantillons de chaque classe.</p>
+      <p>Le signal avec les périodes de crise surlignées est dans l'aperçu de l'accueil (bouton « Voir crise » pour aller directement à une crise). <a class="btn-link" href="#apercu" data-go-viewer>Ouvrir l'aperçu du signal</a></p>
+      <div id="imbalance"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Oui, le déséquilibre est très important : 96,73 % d'échantillons hors crise et 3,27 % de crise, soit environ 30 échantillons hors crise pour 1 de crise. Un modèle qui prédirait toujours « pas de crise » aurait une accuracy de 96,7 % sans détecter aucune crise. L'accuracy seule est donc trompeuse : il faudra le recall, la precision et le F1 sur la classe 1, et traiter ce déséquilibre (stratification, <code>class_weight</code>, rééchantillonnage).</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== EXPLORATION : PARTIES IV, V, VI ===================== -->
+<section id="exploration" class="section section-anchor">
+  <div class="wrap">
+    <header class="section-head">
+      <span class="part-tag">Parties IV, V et VI</span>
+      <h2>Exploration</h2>
+      <p>Segmentation du signal (question 7), extraction des caractéristiques (question 8) et analyse fréquentielle (question 9).</p>
+    </header>
+
+    <h3 class="part-head">Partie IV · Segmentation du signal</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 7</span><h3>Découper le signal en fenêtres</h3></div>
+      <p class="q-ask">Fenêtre de 2 secondes avec 50 % de recouvrement (512 échantillons à 256 Hz). Déterminer la classe de chaque fenêtre : 1 si au moins 50 % de ses échantillons correspondent à une crise.</p>
+      <div class="kpis" id="winKpis"></div>
+      <h4 class="q-sub">Premières fenêtres de 190304A_E</h4>
+      <div class="table-scroll"><table class="table table-compact" id="winFirst"><thead></thead><tbody></tbody></table></div>
+      <h4 class="q-sub">Fenêtres par patient</h4>
+      <div class="table-scroll table-tall"><table class="table table-compact" id="winPatients"><thead></thead><tbody></tbody></table></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Pour 256 Hz, une fenêtre fait 512 échantillons et le décalage est de 256 échantillons : un enregistrement de N échantillons donne (N − 512) // 256 + 1 fenêtres. Le tableau de segmentation contient une ligne par fenêtre (position, temps de début et de fin, fraction de crise, classe). Au total 33 206 fenêtres : 32 038 de classe 0 et 1 168 de classe 1. Le déséquilibre persiste au niveau des fenêtres : les fenêtres de crise sont minoritaires (3,52 %).</p>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie V · Extraction des caractéristiques</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 8</span><h3>Dataset de caractéristiques temporelles</h3></div>
+      <p class="q-ask">Pour chaque fenêtre : moyenne, écart-type, variance, minimum, maximum, amplitude, RMS, énergie. Une ligne = une fenêtre EEG. Vérifier le nombre total de fenêtres et le nombre de fenêtres de chaque classe.</p>
+      <div class="table-scroll"><table class="table table-compact" id="featFirst"><thead></thead><tbody></tbody></table></div>
+      <div id="featCounts"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Le dataset de la partie V a une ligne par fenêtre avec <code>Mean, Std, Variance, Min, Max, Amplitude, RMS, Energy</code> et <code>Class</code>. Les colonnes <code>patient_id</code>, <code>window_in_patient</code>, <code>window_start</code> et <code>window_end</code> permettent de retrouver la fenêtre dans le signal, par exemple pour reconstruire les crises plus tard. Vérifications : 33 206 fenêtres, dont 32 038 de classe 0 (96,48 %) et 1 168 de classe 1 (3,52 %). Une version détaillée par canal existe aussi (<code>features_per_channel</code>).</p>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie VI · Analyse fréquentielle</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 9</span><h3>FFT et puissance par bande de fréquence</h3></div>
+      <p class="q-ask">Pour chaque fenêtre, calculer la FFT. Représenter le signal dans le domaine temporel et son spectre. Calculer la puissance dans les bandes Delta (0,5–4 Hz), Theta (4–8 Hz), Alpha (8–13 Hz) et Beta (13–30 Hz), et les ajouter au dataset.</p>
+      <div class="table-scroll"><table class="table table-compact" id="freqFirst"><thead></thead><tbody></tbody></table></div>
+      <h4 class="q-sub">Fenêtre hors crise et fenêtre de crise du même patient</h4>
+      <div class="spec-tools">
+        <label class="visually-hidden" for="specPatient">Patient</label>
+        <select id="specPatient" class="select select-sm"></select>
+        <span class="csv-status" id="specStatus" role="status"></span>
+      </div>
+      <div class="spec-grid">
+        <figure><figcaption id="specCap0">Hors crise</figcaption><canvas id="specTime0" class="spec-canvas" role="img" aria-label="Signal d'une fenêtre hors crise"></canvas><canvas id="specFreq0" class="spec-canvas" role="img" aria-label="Spectre d'une fenêtre hors crise"></canvas></figure>
+        <figure><figcaption id="specCap1">Crise</figcaption><canvas id="specTime1" class="spec-canvas" role="img" aria-label="Signal d'une fenêtre de crise"></canvas><canvas id="specFreq1" class="spec-canvas" role="img" aria-label="Spectre d'une fenêtre de crise"></canvas></figure>
+      </div>
+      <p class="note">Tracé calculé dans le navigateur à partir du CSV du patient, sous-échantillonné à 64 Hz : le spectre s'arrête à 32 Hz et reste approximatif par rapport au calcul du notebook à 256 Hz.</p>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Le dataset passe à 12 variables plus <code>Class</code> : les 8 caractéristiques temporelles et les puissances <code>Delta, Theta, Alpha, Beta</code> (fichier <code>window_features_freq.csv</code>). Le signal est vu dans le temps (à gauche) et son spectre (à droite) montre quelles fréquences contiennent de la puissance. Les crises d'absence étant des décharges rythmiques lentes, on s'attend à plus de puissance en Delta et Theta ; la vérification sur toutes les fenêtres est faite en partie VII.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== ANALYSE : PARTIES VII, VIII ===================== -->
+<section id="analyse" class="section section-anchor">
+  <div class="wrap">
+    <header class="section-head">
+      <span class="part-tag">Parties VII et VIII</span>
+      <h2>Analyse</h2>
+      <p>Analyse exploratoire des caractéristiques (questions 10 et 11) et construction des modèles (question 12).</p>
+    </header>
+
+    <h3 class="part-head">Partie VII · Analyse exploratoire</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 10</span><h3>Comparer les caractéristiques entre les deux classes</h3></div>
+      <p class="q-ask">Moyenne de l'énergie, de la puissance Delta, de la puissance Theta et écart-type pour la classe 0 et la classe 1, avec une représentation graphique.</p>
+      <div class="table-scroll"><table class="table" id="cmpTable"><thead></thead><tbody></tbody></table></div>
+      <h4 class="q-sub">Rapport classe 1 / classe 0 (échelle logarithmique)</h4>
+      <div id="ratioBars"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Un rapport supérieur à 1 signifie que la caractéristique est plus grande pendant la crise. L'écart-type est plus élevé en crise (× 1,41). L'énergie (× 0,54), Delta (× 0,23) et Theta (× 0,27) ont en revanche une moyenne plus faible en crise que hors crise.</p>
+        <p>Lecture : ces moyennes sont calculées sur toutes les fenêtres de tous les patients regroupés. Or l'AUC de la question 11 (basée sur les rangs) place Alpha, Theta et Delta plus haut pendant les crises (AUC de 0,78 à 0,85). Les deux résultats ne se contredisent pas forcément : une moyenne peut être tirée vers le bas ou le haut par quelques fenêtres extrêmes. Les médianes que le notebook calcule ne sont pas affichées dans ses sorties, donc cette explication reste à vérifier.</p>
+      </div>
+    </article>
+
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 11</span><h3>Matrice de corrélation et caractéristiques discriminantes</h3></div>
+      <p class="q-ask">Quelles caractéristiques semblent fortement corrélées ? Certaines apportent-elles des informations redondantes ? Lesquelles semblent les plus discriminantes ?</p>
+      <div class="chart-scroll"><div class="heat" id="heat"></div></div>
+      <h4 class="q-sub">Pouvoir discriminant (AUC univariée)</h4>
+      <div class="table-scroll"><table class="table table-compact" id="aucTable"><thead></thead><tbody></tbody></table></div>
+      <div id="auc"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <ol class="answer-list">
+          <li><b>Fortement corrélées</b> (|r| ≥ 0,9) : Variance et Delta (r = +0,976), Std et Amplitude (r = +0,954).</li>
+          <li><b>Redondance</b> : oui, plusieurs caractéristiques portent la même information. Certaines le sont par construction : Variance = Std², Amplitude = Max − Min, Energy = N × RMS². On pourra en supprimer en partie XII (sélection de caractéristiques).</li>
+          <li><b>Plus discriminantes</b> : Alpha (AUC 0,853), Theta (0,852) et Amplitude (0,825), devant Beta, Delta et Std. La barre « pouvoir discriminant » est l'écart de l'AUC à 0,5, ramené sur une échelle de 0 à 1.</li>
+        </ol>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie VIII · Construction du modèle de Data Mining</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 12</span><h3>Séparation stratifiée 80 / 20 et quatre modèles</h3></div>
+      <p class="q-ask">Séparer les données en 80 % entraînement et 20 % test de manière stratifiée. Construire au minimum : Decision Tree, Random Forest, KNN, SVM.</p>
+      <div class="table-scroll"><table class="table" id="splitTable"><thead></thead><tbody></tbody></table></div>
+      <div class="kpis" id="trainTimes"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Les quatre modèles sont entraînés sur 80 % des fenêtres (26 564 fenêtres d'entraînement, 6 642 de test). La stratification conserve la même proportion de fenêtres de crise : 3,516 % à l'entraînement et 3,523 % au test.</p>
+        <p><b>Limite à signaler</b> : les fenêtres se chevauchent à 50 %. Avec une séparation aléatoire, une fenêtre de test a souvent une voisine presque identique dans l'entraînement, ce qui peut rendre les scores optimistes. Le contrôle par patient de la partie IX refait l'évaluation en séparant par patient.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== RÉSULTATS : PARTIES IX, X, XI, XII ===================== -->
+<section id="resultats" class="section section-anchor">
+  <div class="wrap">
+    <header class="section-head">
+      <span class="part-tag">Parties IX à XII</span>
+      <h2>Résultats</h2>
+      <p>Évaluation des modèles (question 13), détection temporelle (question 14), analyse des erreurs et améliorations.</p>
+    </header>
+
+    <h3 class="part-head">Partie IX · Évaluation des modèles</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 13</span><h3>Quelle métrique privilégier ?</h3></div>
+      <p class="q-ask">Pour chaque modèle : accuracy, precision, recall, F1-score et matrice de confusion. Expliquer pourquoi l'accuracy seule peut être trompeuse et quelle(s) métrique(s) sont les plus pertinentes.</p>
+      <div class="table-scroll"><table class="table" id="modelTable4"><thead></thead><tbody></tbody></table></div>
+      <div class="grid-4" id="confusions"></div>
+      <p class="note">VN : fenêtres sans crise prédites sans crise. FP : fausses alarmes. FN : crises manquées. VP : crises détectées. Precision = VP / (VP + FP). Recall = VP / (VP + FN). F1 = moyenne harmonique des deux.</p>
+      <h4 class="q-sub">Contrôle de robustesse : séparation par patient</h4>
+      <div id="robust"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <ul class="answer-bullets">
+          <li><b>Accuracy</b> : dominée par la classe majoritaire. Le modèle « toujours pas de crise » obtient 96,48 % d'accuracy avec un recall de 0 : il ne détecte aucune crise. Elle est trompeuse ici.</li>
+          <li><b>Precision</b> : parmi les fenêtres prédites « crise », la part qui l'est vraiment. Elle mesure les fausses alarmes.</li>
+          <li><b>Recall</b> : parmi les vraies crises, la part détectée. C'est la métrique la plus importante pour une application médicale, car une crise manquée est plus grave qu'une fausse alarme.</li>
+          <li><b>F1-score</b> : ne peut être élevé que si precision et recall le sont. C'est la métrique de synthèse la plus pertinente pour comparer les modèles sur la classe minoritaire.</li>
+        </ul>
+        <p>Conclusion : on privilégie le recall et le F1-score sur la classe 1. L'accuracy ne sert que de contrôle. Parmi les quatre modèles de base, le meilleur F1 est celui du Random Forest (0,653), retenu pour la partie X. Le SVM prédit toujours « pas de crise ». Avec une séparation par patient, le recall du Random Forest tombe de 0,547 à 0,294.</p>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie X · Détection temporelle des crises</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Question 14</span><h3>Reconstruire les intervalles de crise</h3></div>
+      <p class="q-ask">À partir des prédictions du meilleur modèle, reconstruire les intervalles temporels des crises détectées et les comparer aux annotations réelles. Représenter le signal, les crises réelles et les crises prédites.</p>
+      <div class="kpis" id="detKpis"></div>
+      <h4 class="q-sub">Signal, crises réelles et crises prédites</h4>
+      <div class="spec-tools">
+        <label class="visually-hidden" for="tempPatient">Patient de test</label>
+        <select id="tempPatient" class="select select-sm"></select>
+        <label class="visually-hidden" for="tempView">Vue</label>
+        <select id="tempView" class="select select-sm"></select>
+        <span class="csv-status" id="tempStatus" role="status"></span>
+      </div>
+      <canvas id="temporalCanvas" class="temporal-canvas" role="img" aria-label="Signal, crises réelles et crises prédites"></canvas>
+      <div class="legend-inline">
+        <span class="legend-item"><span class="legend-box"></span>Crise réelle</span>
+        <span class="legend-item"><span class="legend-box legend-pred"></span>Crise prédite</span>
+        <span class="legend-item"><span class="legend-line"></span>Activité RMS</span>
+      </div>
+      <p class="note" id="tempNote"></p>
+      <h4 class="q-sub">Comparaison des intervalles (extrait du notebook)</h4>
+      <div class="table-scroll table-tall"><table class="table table-compact" id="cmpIntervals"><thead></thead><tbody></tbody></table></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>La détection est reconstruite à partir des fenêtres consécutives prédites en classe 1 par le Random Forest : chaque groupe de fenêtres positives devient un intervalle [début, fin] (<code>partie_X_crises_detectees.csv</code>). La séparation se fait par patient (graine 42) : patients de test 190304A-E, 191113A-D, 210914B-A, 220121B-D et 230105B-H. Le modèle détecte 57 intervalles.</p>
+        <p>Un intervalle prédit est un vrai positif s'il recouvre au moins une crise annotée, sinon un faux positif. Une crise annotée sans intervalle prédit est un faux négatif. Résultat : 39 vrais positifs, 18 faux positifs et 3 faux négatifs, soit une precision de 0,684, un rappel de 0,929 et un F1 de 0,788 au niveau des intervalles. Dans l'extrait ci-dessous, les intervalles prédits durent de 2 à 5 s et plusieurs recouvrent la même crise longue : par exemple la crise de 512 à 561 s de 210914B-A est touchée par six intervalles.</p>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie XI · Analyse des erreurs</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Partie XI</span><h3>Faux positifs, faux négatifs, vrais positifs, vrais négatifs</h3></div>
+      <p class="q-ask">Analyser les erreurs produites par le meilleur modèle.</p>
+      <div class="grid-2 grid-tight">
+        <div><h4 class="q-sub">Au niveau des fenêtres (patients de test)</h4><div id="errWindow"></div></div>
+        <div><h4 class="q-sub">Par patient</h4><div class="table-scroll"><table class="table table-compact" id="errPatient"><thead></thead><tbody></tbody></table></div></div>
+      </div>
+      <div class="answer">
+        <b>Réponse</b>
+        <p>Au niveau des fenêtres, les faux positifs sont des fenêtres hors crise classées à tort comme crise, les faux négatifs des fenêtres de crise ratées, les vrais positifs des fenêtres de crise détectées et les vrais négatifs des fenêtres hors crise correctement rejetées. Sur les 5 patients de test : 9 141 vrais négatifs, 23 faux positifs, 221 faux négatifs et 92 vrais positifs, soit precision 0,800, recall 0,294 et F1 0,430.</p>
+        <p>Au niveau temporel, les faux positifs sont des intervalles prédits qui ne recouvrent aucune annotation (18) et les faux négatifs des crises annotées sans intervalle prédit (3). Dans une application médicale, les faux négatifs sont les plus critiques : ils signifient une crise manquée. Les faux positifs augmentent les fausses alertes, mais sont en général moins graves. Les erreurs se concentrent sur 210914B-A (151 faux négatifs) ; aucune fenêtre n'est détectée pour 191113A-D.</p>
+      </div>
+    </article>
+
+    <h3 class="part-head">Partie XII · Amélioration du système</h3>
+    <article class="card qcard">
+      <div class="q-head"><span class="q-badge">Partie XII</span><h3>Deux améliorations testées</h3></div>
+      <p class="q-ask">Proposer au moins deux améliorations permettant d'obtenir de meilleures performances.</p>
+      <div class="table-scroll"><table class="table" id="modelTable6"><thead></thead><tbody></tbody></table></div>
+      <div class="chart-legend" id="modelLegend"></div>
+      <div class="chart-scroll" id="modelChart"></div>
+      <div class="grid-2 grid-tight" id="confusionsXii"></div>
+      <div class="answer">
+        <b>Réponse</b>
+        <ol class="answer-list">
+          <li><b>Traiter le déséquilibre de classe.</b> Le Random Forest équilibré utilise <code>class_weight='balanced_subsample'</code>, ce qui donne plus de poids à la classe 1 pendant l'entraînement. Il passe le recall de 0,547 à 0,637 et le F1 de 0,653 à 0,701, au prix d'une precision un peu plus faible (0,780).</li>
+          <li><b>Utiliser le deep learning.</b> Un réseau dense (MLP) est entraîné sur les 12 caractéristiques, après sur-échantillonnage de la classe crise dans le jeu d'entraînement uniquement (934 → 25 630 fenêtres de crise). Il obtient le meilleur recall (0,902) mais une precision de 0,297 : 500 fausses alertes.</li>
+        </ol>
+        <p>Conclusion : le meilleur F1 est celui du Random Forest équilibré (0,701), le meilleur recall celui du MLP (0,902). On retient en priorité un modèle qui garde un bon recall et un bon F1 sur la classe crise, car l'accuracy seule reste trompeuse.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== À PROPOS ===================== -->
+<section id="apropos" class="section section-anchor">
+  <div class="wrap">
+    <header class="section-head">
+      <h2>À propos</h2>
+      <p>Mini-projet de Data Mining appliqué aux données biomédicales (ENIT) : détection automatique des crises d'absence à partir de signaux EEG.</p>
+    </header>
+
+    <article class="card qcard">
+      <h3 class="card-title">Pipeline du projet</h3>
+      <ol class="pipeline" id="pipeline"></ol>
+    </article>
+
+    <article class="card qcard">
+      <h3 class="card-title">Correspondance entre l'énoncé et le site</h3>
+      <div class="table-scroll"><table class="table table-compact" id="mapTable"><thead></thead><tbody></tbody></table></div>
+    </article>
+
+    <div class="grid-2">
+      <article class="card">
+        <h3 class="card-title">Livrables demandés</h3>
+        <ul class="plain">
+          <li>Notebook Python : chargement, exploration, visualisations, traitement des annotations, segmentation, extraction des caractéristiques, entraînement, évaluation, comparaison, détection temporelle, analyse des erreurs.</li>
+          <li>Rapport : introduction, méthodologie, résultats, discussion, conclusion.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3 class="card-title">Limites à garder en tête</h3>
+        <ul class="plain">
+          <li>Les fenêtres se recouvrent à 50 % : avec une séparation aléatoire, des fenêtres voisines se retrouvent en entraînement et en test. Le test par patients fait passer le recall du Random Forest de 0,547 à 0,294.</li>
+          <li>Le SVM prédit toujours « pas de crise » (recall 0).</li>
+          <li>Une annotation aberrante (210504B-C, 21 608 s) est exclue du jeu.</li>
+          <li>Les patients 230406B-A et 230515B-G apparaissent deux fois dans l'Excel : la dernière ligne est conservée.</li>
+        </ul>
+      </article>
+    </div>
+
+    <article class="card qcard">
+      <h3 class="card-title">Sur ce site</h3>
+      <ul class="plain">
+        <li>Tous les chiffres viennent des sorties du notebook (parties I à XII), recopiées dans l'objet <code>DATA</code> de <code>script.js</code>.</li>
+        <li>Avec Live Server, le site lit directement <code>../data/csv/</code> (signaux), <code>../output/annotations_with_signals.csv</code> (crises) et <code>../output/partie_X_crises_detectees.csv</code> (intervalles prédits). Sinon, chargez les CSV avec le bouton de l'aperçu : les tracés restent illustratifs tant qu'aucun signal n'est chargé.</li>
+        <li>Les figures du notebook (matplotlib) sont reproduites ou remplacées par des graphiques équivalents calculés dans le navigateur.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">EEG Data Mining · Mini-projet Data Mining, ENIT</div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
